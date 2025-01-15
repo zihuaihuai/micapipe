@@ -6,8 +6,6 @@ output_dir = config['output_dir']
 script_dir = config['script_dir']
 subjects = config['subjects']
 sessions = config['sessions']
-# suffix= config['parameters']['proc_structural']['T1wStr'],
-
 
 rule all:
     input:
@@ -20,19 +18,37 @@ rule all:
 
 rule proc_structural:
     input:
-        "/data_/mica3/BIDS_CI/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_run-2_T1w.nii.gz"
+        bids_file="/data_/mica3/BIDS_CI/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_run-2_T1w.nii.gz"
     output:
-        "{output_dir}/micapipe_v0.2.0/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
+        t1w_output="{output_dir}/micapipe_v0.2.0/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
     params:
         tmpDir="tmp",
         T1wStr=config["parameters"]["proc_structural"].get("T1wStr", "T1w.nii"),
         UNI=config["parameters"]["proc_structural"].get("UNI", "FALSE"),
         MF=config["parameters"]["proc_structural"].get("MF", 45),
         fs_licence="$FREESURFER_HOME/license.txt",
+        micaq=config["parameters"]["proc_structural"].get("micaq", "FALSE"),
+        qall=config["parameters"]["proc_structural"].get("qall", "FALSE"),
     threads: config.get("threads", 4),
+    log:
+        log_file="logs/proc_structural_{wildcards.subject}_{wildcards.session}.log"
     shell:
         """
-        micapipe -sub sub-{wildcards.subject} -out {output_dir} -bids {bids_dir} \
-                -proc_structural -T1wStr {params.T1wStr} --mf {params.MF} \
-            -fs_licence {fs_licence} -ses {wildcards.session}
+        echo "Running structural processing for sub-{wildcards.subject}, ses-{wildcards.session}" | tee -a {log.log_file}
+        
+        COMMAND="{script_dir}/01_proc-structural.sh {bids_dir} sub-{wildcards.subject} {output_dir} -ses {wildcards.session} \
+                --threads {threads} --tmpDir {params.tmpDir} --T1wStr {params.T1wStr} --uni {params.UNI} --mf {params.MF}"
+
+        if [[ "{params.micaq}" == "TRUE" ]]; then
+            echo "Using mica.q for processing" | tee -a {log.log_file}
+            qsub -q mica.q -pe smp {threads} -l h_vmem=6G -N qsub_{wildcards.subject}_volumetric \
+                -e {log.log_file}.e -o {log.log_file}.txt $COMMAND
+        elif [[ "{params.qall}" == "TRUE" ]]; then
+            echo "Using all.q for processing" | tee -a {log.log_file}
+            qsub -q all.q -pe all.pe {threads} -l h_vmem=6G -N qsub_{wildcards.subject}_volumetric \
+                -e {log.log_file}.e -o {log.log_file}.txt $COMMAND
+        else
+            echo "Running locally" | tee -a {log.log_file}
+            $COMMAND 2>&1 | tee -a {log.log_file}
+        fi
         """
