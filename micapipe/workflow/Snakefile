@@ -7,6 +7,12 @@ script_dir = config['script_dir']
 subjects = config['subjects']
 sessions = config['sessions']
 
+from datetime import datetime
+
+def timestamp():
+    return datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
+
+
 rule all:
     input:
         expand(
@@ -29,13 +35,13 @@ rule proc_structural:
         fs_licence="$FREESURFER_HOME/license.txt",
         micaq=config["parameters"]["proc_structural"].get("micaq", "FALSE"),
         qall=config["parameters"]["proc_structural"].get("qall", "FALSE"),
-        nocleanup=config["parameters"]["proc_structural"].get("nocleanup", "FALSE")
+        nocleanup=config["parameters"]["proc_structural"].get("nocleanup", "FALSE"),
         proc=config["parameters"]["proc_structural"].get("proc", "LOCAL")
     threads: config.get("threads", 4),
-    log:
+    log: log_file_str=f"{output_dir}/logs/proc_structural_{timestamp()}"
     shell:
         """
-        log_file_str=$dir_logs/proc_structural_$(date +'%Y-%m-%d_%H.%M.%S')
+        log_file_str={output_dir}/logs/proc_structural_$(date +'%Y-%m-%d_%H.%M.%S')
         echo "Running structural processing for sub-{wildcards.subject}, ses-{wildcards.session}"
         
         COMMAND="{script_dir}/01_proc-structural.sh {bids_dir} sub-{wildcards.subject} {output_dir} {wildcards.session} \
@@ -45,18 +51,18 @@ rule proc_structural:
             Warning "This option only works on the MICA workstations"
             export PROC="qsub-MICA"
             # Info "Setting a warper to run on mica.q"
-            qsub -q mica.q -pe smp {params.threads} -l h_vmem=6G -N q${wildcards.subject}_volumetric -e ${log_file_str}.e -o ${log_file_str}.txt $COMMAND $PROC
+            qsub -q mica.q -pe smp {threads} -l h_vmem=6G -N q${wildcards.subject}_volumetric -e {log.log_file_str}.e -o {log.log_file_str}.txt $COMMAND $PROC
         # all.q - Structural processing: Volumetric
         elif [[ {params.qall} == "TRUE" ]]; then
             Info "all.q qsub - Structural processing: Volumetric"
             Warning "This option only works on the McGill BIC network"
             export PROC="qsub-all.q"
             # Info "Setting a warper to run on all.q"
-            qsub -q all.q -pe all.pe {params.threads} -l h_vmem=6G -N q${wildcards.subject}_volumetric -e ${log_file_str}.e -o ${log_file_str}.txt $COMMAND $PROC
+            qsub -q all.q -pe all.pe {threads} -l h_vmem=6G -N q${wildcards.subject}_volumetric -e {log.log_file_str}.e -o {log.log_file_str}.txt $COMMAND $PROC
         else
             export PROC="LOCAL"
             # LOCAL Structural processing: Volumetric
-            $COMMAND $PROC 2>&1 | tee -a ${log_file_str}.txt
+            $COMMAND $PROC 2>&1 | tee -a {log.log_file_str}.txt
         fi
         """
 
