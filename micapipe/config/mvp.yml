@@ -1,6 +1,6 @@
 bids_dir: "/data_/mica3/BIDS_CI/rawdata"
 output_dir: "/home/bic/eyang/processed_data2"
-script_dir: "./functions"
+script_dir: "./old/functions"
 subjects:
   - "mri3T"
 sessions:

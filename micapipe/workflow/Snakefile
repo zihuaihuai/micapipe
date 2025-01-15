@@ -31,7 +31,7 @@ rule proc_structural:
         qall=config["parameters"]["proc_structural"].get("qall", "FALSE"),
     threads: config.get("threads", 4),
     log:
-        log_file="logs/proc_structural_{wildcards.subject}_{wildcards.session}.log"
+        log_file="{output_dir}/logs/proc_structural_{subject}_{session}.log"
     shell:
         """
         echo "Running structural processing for sub-{wildcards.subject}, ses-{wildcards.session}" | tee -a {log.log_file}
@@ -52,3 +52,4 @@ rule proc_structural:
             $COMMAND 2>&1 | tee -a {log.log_file}
         fi
         """
+
