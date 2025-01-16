@@ -1,7 +1,7 @@
 from datetime import datetime
 
 def timestamp():
-    return datatime.now().strftime('%Y-%m-%d_%H.%M.%S')
+    return datetime.now().strftime('%Y-%m-%d_%H.%M.%S')
 
 configfile: 'config/mvp.yml'
 
@@ -36,14 +36,15 @@ rule proc_structural:
         qall=config["parameters"]["proc_structural"].get("qall", "FALSE"),
         nocleanup=config["parameters"]["proc_structural"].get("nocleanup", "FALSE"),
         proc=config["parameters"]["proc_structural"].get("proc", "LOCAL"),
-        log_file=lambda wildcards: f"{output_dir}/micapipe_v0.2.0/sub-{wildcards.subject}/ses-{wildcards.session}/logs/proc_structural_{timestamp()}"
+        log_file_str=lambda wildcards: f"{output_dir}/micapipe_v0.2.0/sub-{wildcards.subject}/ses-{wildcards.session}/logs/proc_structural_{timestamp()}"
     threads: config.get("threads", 4),
     shell:
         """
-        log_file_str={output_dir}/logs/proc_structural_$(date +'%Y-%m-%d_%H.%M.%S')
+        mkdir -p {params.tmpDir} {output_dir}/micapipe_v0.2.0/sub-{wildcards.subject}/ses-{wildcards.session}/logs
+
         echo "Running structural processing for sub-{wildcards.subject}, ses-{wildcards.session}"
         
-        COMMAND="{script_dir}/01_proc-structural.sh {bids_dir} sub-{wildcards.subject} {output_dir} {wildcards.session} \
+        COMMAND="{script_dir}/01_proc-structural.sh {bids_dir} {wildcards.subject} {output_dir} {wildcards.session} \
                 {params.nocleanup} {threads} {params.tmpDir} {params.T1wStr} {params.UNI} {params.MF}"
         if [[ {params.micaq} == "TRUE" ]]; then
             Info "MICA qsub - Structural processing: Volumetric"
