@@ -36,9 +36,8 @@ rule proc_structural:
         qall=config["parameters"]["proc_structural"].get("qall", "FALSE"),
         nocleanup=config["parameters"]["proc_structural"].get("nocleanup", "FALSE"),
         proc=config["parameters"]["proc_structural"].get("proc", "LOCAL")
-    threads: config.get("threads", 4),
-    log:
         log_file=lambda wildcards: f"{output_dir}/micapipe_v0.2.0/sub-{wildcards.subject}/ses-{wildcards.session}/logs/proc_structural_{timestamp()}"
+    threads: config.get("threads", 4),
     shell:
         """
         log_file_str={output_dir}/logs/proc_structural_$(date +'%Y-%m-%d_%H.%M.%S')
@@ -51,18 +50,18 @@ rule proc_structural:
             Warning "This option only works on the MICA workstations"
             export PROC="qsub-MICA"
             # Info "Setting a warper to run on mica.q"
-            qsub -q mica.q -pe smp {threads} -l h_vmem=6G -N q${wildcards.subject}_volumetric -e {log.log_file_str}.e -o {log.log_file_str}.txt $COMMAND $PROC
+            qsub -q mica.q -pe smp {threads} -l h_vmem=6G -N q${wildcards.subject}_volumetric -e {params.log_file_str}.e -o {params.log_file_str}.txt $COMMAND $PROC
         # all.q - Structural processing: Volumetric
         elif [[ {params.qall} == "TRUE" ]]; then
             Info "all.q qsub - Structural processing: Volumetric"
             Warning "This option only works on the McGill BIC network"
             export PROC="qsub-all.q"
             # Info "Setting a warper to run on all.q"
-            qsub -q all.q -pe all.pe {threads} -l h_vmem=6G -N q${wildcards.subject}_volumetric -e {log.log_file_str}.e -o {log.log_file_str}.txt $COMMAND $PROC
+            qsub -q all.q -pe all.pe {threads} -l h_vmem=6G -N q${wildcards.subject}_volumetric -e {params.log_file_str}.e -o {params.log_file_str}.txt $COMMAND $PROC
         else
             export PROC="LOCAL"
             # LOCAL Structural processing: Volumetric
-            $COMMAND $PROC 2>&1 | tee -a {log.log_file_str}.txt
+            $COMMAND $PROC 2>&1 | tee -a {params.log_file_str}.txt
         fi
         """
 
