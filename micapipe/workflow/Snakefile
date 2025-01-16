@@ -1,3 +1,8 @@
+from datetime import datetime
+
+def timestamp():
+    return datatime.now().strftime('%Y-%m-%d_%H.%M.%S')
+
 configfile: 'config/mvp.yml'
 
 # Global variables from the config file
@@ -6,11 +11,6 @@ output_dir = config['output_dir']
 script_dir = config['script_dir']
 subjects = config['subjects']
 sessions = config['sessions']
-
-from datetime import datetime
-
-def timestamp():
-    return datatime.now().strftime('%Y-%m-%d_%H.%M.%S')
 
 rule all:
     input:
