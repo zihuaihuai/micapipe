@@ -38,7 +38,7 @@ rule proc_structural:
         nocleanup=config["parameters"]["proc_structural"].get("nocleanup", "FALSE"),
         proc=config["parameters"]["proc_structural"].get("proc", "LOCAL")
     threads: config.get("threads", 4),
-    log: log_file_str=f"{output_dir}/micapipe_v0.2.0/sub-{subject}/ses-{session}/logs/proc_structural_{timestamp()}"
+    log: log_file_str=lambda wildcards: f"{output_dir}/micapipe_v0.2.0/sub-{wildcards.subject}/ses-{wildcards.session}/logs/proc_structural_{timestamp()}"
     shell:
         """
         log_file_str={output_dir}/logs/proc_structural_$(date +'%Y-%m-%d_%H.%M.%S')
