@@ -1,8 +1,3 @@
-from datetime import datetime
-
-def timestamp():
-    return datetime.now().strftime('%Y-%m-%d_%H.%M.%S')
-
 configfile: 'config/mvp.yml'
 
 # Global variables from the config file
@@ -21,48 +16,41 @@ rule all:
             output_dir=output_dir
         )
 
+def get_t1w_input(wildcards):
+    """
+    Calculate the input T1w path based on the subject and session wildcards.
+    """
+    print("wildscards", wildcards)
+    return (
+        f"{config['bids_dir']}/sub-{wildcards.subject}/ses-{wildcards.session}/anat/"
+        f"sub-{wildcards.subject}_ses-{wildcards.session}_{config['parameters']['proc_structural']['T1wStr']}.nii.gz"
+    )
+
 rule proc_structural:
     input:
-        bids_file="/data_/mica3/BIDS_CI/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_run-2_T1w.nii.gz"
+        get_t1w_input
+    # output:
+        # "/home/bic/eyang/processed_data2/micapipe_v0.2.0/sub-mri3T/ses-01/anat/sub-mri3T_ses-01_space-nativepro_T1w.nii.gz"
     output:
-        t1w_output="{output_dir}/micapipe_v0.2.0/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
+        bids(
+            root='/home/bic/eyang/processed_data2/micapipe_v0.2.0',
+            subject='{subject}',
+            session='{session}',
+            datatype='anat',
+            space='nativepro',
+            suffix='T1w.nii.gz',
+        )
     params:
-        tmpDir="{output_dir}/tmp",
+        tmpDir="tmp",
         T1wStr=config["parameters"]["proc_structural"].get("T1wStr", "T1w.nii"),
         UNI=config["parameters"]["proc_structural"].get("UNI", "FALSE"),
         MF=config["parameters"]["proc_structural"].get("MF", 45),
         fs_licence="$FREESURFER_HOME/license.txt",
-        micaq=config["parameters"]["proc_structural"].get("micaq", "FALSE"),
-        qall=config["parameters"]["proc_structural"].get("qall", "FALSE"),
-        nocleanup=config["parameters"]["proc_structural"].get("nocleanup", "FALSE"),
-        proc=config["parameters"]["proc_structural"].get("proc", "LOCAL"),
-        log_file_str=lambda wildcards: f"{output_dir}/micapipe_v0.2.0/sub-{wildcards.subject}/ses-{wildcards.session}/logs/proc_structural_{timestamp()}"
     threads: config.get("threads", 4),
     shell:
         """
-        mkdir -p {params.tmpDir} {output_dir}/micapipe_v0.2.0/sub-{wildcards.subject}/ses-{wildcards.session}/logs
-
-        echo "Running structural processing for sub-{wildcards.subject}, ses-{wildcards.session}"
-        
-        COMMAND="{script_dir}/01_proc-structural.sh {bids_dir} {wildcards.subject} {output_dir} {wildcards.session} \
-                {params.nocleanup} {threads} {params.tmpDir} {params.T1wStr} {params.UNI} {params.MF}"
-        if [[ {params.micaq} == "TRUE" ]]; then
-            Info "MICA qsub - Structural processing: Volumetric"
-            Warning "This option only works on the MICA workstations"
-            export PROC="qsub-MICA"
-            # Info "Setting a warper to run on mica.q"
-            qsub -q mica.q -pe smp {threads} -l h_vmem=6G -N q${wildcards.subject}_volumetric -e {params.log_file_str}.e -o {params.log_file_str}.txt $COMMAND $PROC
-        # all.q - Structural processing: Volumetric
-        elif [[ {params.qall} == "TRUE" ]]; then
-            Info "all.q qsub - Structural processing: Volumetric"
-            Warning "This option only works on the McGill BIC network"
-            export PROC="qsub-all.q"
-            # Info "Setting a warper to run on all.q"
-            qsub -q all.q -pe all.pe {threads} -l h_vmem=6G -N q${wildcards.subject}_volumetric -e {params.log_file_str}.e -o {params.log_file_str}.txt $COMMAND $PROC
-        else
-            export PROC="LOCAL"
-            # LOCAL Structural processing: Volumetric
-            $COMMAND $PROC 2>&1 | tee -a {params.log_file_str}.txt
-        fi
+        micapipe -sub sub-{wildcards.subject} -out {output_dir} -bids {bids_dir} \
+                -proc_structural -T1wStr {params.T1wStr} --mf {params.MF} \
+            -fs_licence {fs_licence} -ses {wildcards.session}
         """
 
