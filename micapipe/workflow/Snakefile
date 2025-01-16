@@ -10,7 +10,7 @@ sessions = config['sessions']
 from datetime import datetime
 
 def timestamp():
-    return time.strftime('%Y-%m-%d_%H.%M.%S')
+    return datatime.now().strftime('%Y-%m-%d_%H.%M.%S')
 
 rule all:
     input:
@@ -35,7 +35,7 @@ rule proc_structural:
         micaq=config["parameters"]["proc_structural"].get("micaq", "FALSE"),
         qall=config["parameters"]["proc_structural"].get("qall", "FALSE"),
         nocleanup=config["parameters"]["proc_structural"].get("nocleanup", "FALSE"),
-        proc=config["parameters"]["proc_structural"].get("proc", "LOCAL")
+        proc=config["parameters"]["proc_structural"].get("proc", "LOCAL"),
         log_file=lambda wildcards: f"{output_dir}/micapipe_v0.2.0/sub-{wildcards.subject}/ses-{wildcards.session}/logs/proc_structural_{timestamp()}"
     threads: config.get("threads", 4),
     shell:
